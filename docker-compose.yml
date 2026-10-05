@@ -9,6 +9,8 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -16,113 +18,37 @@ services:
       retries: 12
     restart: unless-stopped
 
-  crm-service:
+  crm-api:
     build:
       context: .
-      dockerfile: services/Dockerfile
-    command: ["npx", "tsx", "services/crm-service/src/index.ts"]
+      dockerfile: Dockerfile.dotnet
+      args:
+        PROJECT: src/Lifecycle.Api/Lifecycle.Api.csproj
     environment:
-      PORT: 4000
-      DATABASE_URL: postgres://${POSTGRES_USER:-crm_app}:${POSTGRES_PASSWORD:-local_only_change_me}@postgres:5432/${POSTGRES_DB:-lifecycle_crm}
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Crm: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lifecycle_crm};Username=${POSTGRES_USER:-crm_app};Password=${POSTGRES_PASSWORD:-local_only_change_me}
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    restart: unless-stopped
-
-  customer-seed:
-    profiles: ["seed"]
-    build:
-      context: .
-      dockerfile: services/Dockerfile
-    command: ["npx", "tsx", "scripts/seed-customers.ts", "--count=25000", "--reset"]
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-crm_app}:${POSTGRES_PASSWORD:-local_only_change_me}@postgres:5432/${POSTGRES_DB:-lifecycle_crm}
-    depends_on:
-      crm-service:
-        condition: service_healthy
-
-  marketing-service: &department-service
-    build:
-      context: .
-      dockerfile: services/Dockerfile
-    command: ["npx", "tsx", "services/department-service/src/index.ts"]
-    environment: { DEPARTMENT: marketing, PORT: 4101, CRM_URL: http://crm-service:4000 }
-    depends_on: { crm-service: { condition: service_healthy } }
-    restart: unless-stopped
-
-  inside-sales-service:
-    <<: *department-service
-    environment: { DEPARTMENT: inside-sales, PORT: 4102, CRM_URL: http://crm-service:4000 }
-
-  sales-service:
-    <<: *department-service
-    environment: { DEPARTMENT: sales, PORT: 4103, CRM_URL: http://crm-service:4000 }
-
-  ordering-service:
-    <<: *department-service
-    environment: { DEPARTMENT: ordering, PORT: 4104, CRM_URL: http://crm-service:4000 }
-
-  delivery-service:
-    <<: *department-service
-    environment: { DEPARTMENT: delivery, PORT: 4105, CRM_URL: http://crm-service:4000 }
-
-  retention-service:
-    <<: *department-service
-    environment: { DEPARTMENT: retention, PORT: 4106, CRM_URL: http://crm-service:4000 }
-
-  automation-service:
-    build:
-      context: .
-      dockerfile: services/Dockerfile
-    command: ["npx", "tsx", "services/automation-service/src/index.ts"]
-    environment:
-      PORT: 4200
-      DATABASE_URL: postgres://${POSTGRES_USER:-crm_app}:${POSTGRES_PASSWORD:-local_only_change_me}@postgres:5432/${POSTGRES_DB:-lifecycle_crm}
-    depends_on:
-      crm-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4200/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    restart: unless-stopped
-
-  api-gateway:
-    build:
-      context: .
-      dockerfile: services/Dockerfile
-    command: ["npx", "tsx", "services/api-gateway/src/index.ts"]
-    environment:
-      PORT: 8080
-      CRM_URL: http://crm-service:4000
-      MARKETING_URL: http://marketing-service:4101
-      INSIDE_SALES_URL: http://inside-sales-service:4102
-      SALES_URL: http://sales-service:4103
-      ORDERING_URL: http://ordering-service:4104
-      DELIVERY_URL: http://delivery-service:4105
-      RETENTION_URL: http://retention-service:4106
-    depends_on:
-      crm-service: { condition: service_healthy }
-      marketing-service: { condition: service_started }
-      inside-sales-service: { condition: service_started }
-      sales-service: { condition: service_started }
-      ordering-service: { condition: service_started }
-      delivery-service: { condition: service_started }
-      retention-service: { condition: service_started }
-      automation-service: { condition: service_started }
     ports:
-      - "${GATEWAY_PORT:-8080}:8080"
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+      - "${API_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  automation-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dotnet
+      args:
+        PROJECT: src/Lifecycle.Worker/Lifecycle.Worker.csproj
+    command: ["dotnet", "Lifecycle.Worker.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Crm: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lifecycle_crm};Username=${POSTGRES_USER:-crm_app};Password=${POSTGRES_PASSWORD:-local_only_change_me}
+    depends_on:
+      crm-api:
+        condition: service_started
     restart: unless-stopped
 
   web:
@@ -130,9 +56,9 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     depends_on:
-      api-gateway: { condition: service_healthy }
+      crm-api: { condition: service_started }
     environment:
-      API_GATEWAY_HOST: api-gateway:8080
+      CRM_API_HOST: crm-api:8080
     ports:
       - "${WEB_PORT:-3000}:80"
     restart: unless-stopped

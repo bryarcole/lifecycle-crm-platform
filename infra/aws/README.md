@@ -1,6 +1,6 @@
 # AWS deployment example
 
-This Terraform stack is a preliminary ECS/Fargate landing zone for the demo. `deploy_enabled` defaults to `false`: the first apply creates ECR repositories, an ECS cluster, execution role, logs, and a Service Connect namespace, but does not launch application tasks or a load balancer. ECR storage and Cloud Map operations can still incur charges. Review AWS pricing for the chosen region before applying.
+This Terraform stack is a preliminary ECS/Fargate landing zone for the demo. `deploy_enabled` defaults to `false`: the first apply creates ECR repositories for the web app, .NET API, and .NET worker, an ECS cluster, execution role, logs, and a Service Connect namespace, but does not launch application tasks or a load balancer. ECR storage and Cloud Map operations can still incur charges. Review AWS pricing for the chosen region before applying.
 
 ## Prerequisites
 
@@ -22,9 +22,9 @@ terraform plan
 terraform apply
 ```
 
-The output `ecr_repositories` contains the `api` and `web` repository URLs. Build and push the backend and web images to the `demo` tag using the appropriate ECR login command for your account and region. The backend image uses `../../services/Dockerfile`; the frontend image uses `../../apps/web/Dockerfile`. Do not enable application compute until both images are pushed.
+The output `ecr_repositories` contains the `api`, `worker`, and `web` repository URLs. Build the C# API and worker images from `../../Dockerfile.dotnet`, setting `PROJECT` to `src/Lifecycle.Api/Lifecycle.Api.csproj` or `src/Lifecycle.Worker/Lifecycle.Worker.csproj`, respectively. Build the frontend image from `../../apps/web/Dockerfile`. Push each image to its matching ECR repository with the `demo` tag. Do not enable application compute until all three images are pushed.
 
-Create a Secrets Manager secret whose secret string is the PostgreSQL connection URI. The CRM and automation tasks receive the value at runtime through the ECS task execution role.
+Create a Secrets Manager secret whose secret string is the PostgreSQL connection URI. The .NET API and automation-worker tasks receive it at runtime as `ConnectionStrings__Crm` through the ECS task execution role.
 
 ## Enable the ECS deployment
 
@@ -36,9 +36,9 @@ Create an uncommitted `terraform.tfvars` file in this directory containing the d
 - `crm_database_secret_arn`
 - `allowed_ingress_cidrs` set to a trusted CIDR range for the bootstrap HTTP endpoint
 
-Keep the database URI in Secrets Manager, not in the tfvars file. Plan and inspect every change before applying. The task and service resources deploy one frontend, API gateway, CRM API, six department services, and the outbox automation worker. The browser enters through an Application Load Balancer; internal requests use ECS Service Connect aliases. Backend tasks do not receive public IP addresses.
+Keep the database URI in Secrets Manager, not in the tfvars file. Plan and inspect every change before applying. The task and service resources deploy one frontend, one CRM API, and one outbox worker. The browser enters through an Application Load Balancer; the frontend reaches the CRM API through ECS Service Connect. Backend tasks do not receive public IP addresses.
 
-The current listener is HTTP only and the CIDR list defaults to empty, so the endpoint is not externally reachable until a trusted ingress range is configured. Before production, add an ACM certificate and HTTPS listener, DNS, WAF/rate limits, alarms, database subnet groups/private access, backups, autoscaling, and a reviewed task IAM policy. The example uses the standard ECS execution policy and a small fixed task size; right-size and scope these for the target environment.
+The web container proxies `/api` directly to the CRM API over Service Connect; no API gateway or department pass-through tasks are needed. The current listener is HTTP only and the CIDR list defaults to empty, so the endpoint is not externally reachable until a trusted ingress range is configured. Before production, add an ACM certificate and HTTPS listener, DNS, WAF/rate limits, alarms, database subnet groups/private access, backups, autoscaling, and a reviewed task IAM policy. The example uses the standard ECS execution policy and a small fixed task size; right-size and scope these for the target environment.
 
 ## Clean up
 

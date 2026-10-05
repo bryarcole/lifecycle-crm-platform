@@ -1,0 +1,54 @@
+@baseUrl = http://localhost:8080
+@customerId = 00000000-0000-0000-0000-000000000001
+
+### CRM liveness
+GET {{baseUrl}}/health
+
+### Lifecycle portfolio dashboard
+GET {{baseUrl}}/api/dashboard
+
+### Search and page the marketing queue
+GET {{baseUrl}}/api/marketing/queue?limit=10&offset=0&search=Northstar
+
+### Customer activity
+GET {{baseUrl}}/api/events?customerId={{customerId}}
+
+### Automation handoff notifications
+GET {{baseUrl}}/api/notifications
+
+### Customer details
+GET {{baseUrl}}/api/customers/{{customerId}}
+
+### Capture a marketing lead
+POST {{baseUrl}}/api/marketing/actions
+Content-Type: application/json
+
+{
+  "action": "capture_lead",
+  "name": "Morgan Ellis",
+  "company": "Example Furnishings",
+  "email": "morgan@example.com",
+  "campaign": "Showroom expansion",
+  "estimatedValue": 18000
+}
+
+### Engage a lead
+POST {{baseUrl}}/api/marketing/actions
+Content-Type: application/json
+
+{
+  "action": "engage_lead",
+  "customerId": "{{customerId}}"
+}
+
+### Attempt a transition on an unknown customer
+POST {{baseUrl}}/api/inside-sales/actions
+Content-Type: application/json
+
+{
+  "action": "qualify",
+  "customerId": "{{customerId}}"
+}
+
+### Generated OpenAPI document (Development only)
+GET {{baseUrl}}/openapi/v1.json

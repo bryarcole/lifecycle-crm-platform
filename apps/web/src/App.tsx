@@ -83,7 +83,7 @@ const timeAgo = (value: string) => {
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...options, headers: { 'content-type': 'application/json', ...options?.headers } });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error ?? 'Request failed');
+  if (!response.ok) throw new Error(data.detail ?? data.error ?? data.title ?? 'Request failed');
   return data as T;
 }
 

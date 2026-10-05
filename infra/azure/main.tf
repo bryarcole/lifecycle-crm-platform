@@ -1,27 +1,21 @@
 locals {
   app_names = {
-    for name in ["web", "api-gateway", "crm-service", "marketing-service", "inside-sales-service", "sales-service", "ordering-service", "delivery-service", "retention-service", "automation-service"] :
+    for name in ["web", "crm-api", "automation-worker"] :
     name => "${var.project_name}-${name}"
   }
   apps = {
-    web = { port = 80, public = true, command = [], environment = { API_GATEWAY_HOST = "${local.app_names["api-gateway"]}:8080" } }
-    api-gateway = {
-      port = 8080, public = false, command = ["npx", "tsx", "services/api-gateway/src/index.ts"],
-      environment = {
-        PORT = "8080", CRM_URL = "http://${local.app_names["crm-service"]}:4000",
-        MARKETING_URL = "http://${local.app_names["marketing-service"]}:4101", INSIDE_SALES_URL = "http://${local.app_names["inside-sales-service"]}:4102",
-        SALES_URL = "http://${local.app_names["sales-service"]}:4103", ORDERING_URL = "http://${local.app_names["ordering-service"]}:4104",
-        DELIVERY_URL = "http://${local.app_names["delivery-service"]}:4105", RETENTION_URL = "http://${local.app_names["retention-service"]}:4106"
-      }
+    web = {
+      port        = 80, public = true, command = null, image_kind = "web",
+      environment = { CRM_API_HOST = "${local.app_names["crm-api"]}:8080" }
     }
-    crm-service = { port = 4000, public = false, command = ["npx", "tsx", "services/crm-service/src/index.ts"], environment = { PORT = "4000" } }
-    marketing-service = { port = 4101, public = false, command = ["npx", "tsx", "services/department-service/src/index.ts"], environment = { DEPARTMENT = "marketing", PORT = "4101", CRM_URL = "http://${local.app_names["crm-service"]}:4000" } }
-    inside-sales-service = { port = 4102, public = false, command = ["npx", "tsx", "services/department-service/src/index.ts"], environment = { DEPARTMENT = "inside-sales", PORT = "4102", CRM_URL = "http://${local.app_names["crm-service"]}:4000" } }
-    sales-service = { port = 4103, public = false, command = ["npx", "tsx", "services/department-service/src/index.ts"], environment = { DEPARTMENT = "sales", PORT = "4103", CRM_URL = "http://${local.app_names["crm-service"]}:4000" } }
-    ordering-service = { port = 4104, public = false, command = ["npx", "tsx", "services/department-service/src/index.ts"], environment = { DEPARTMENT = "ordering", PORT = "4104", CRM_URL = "http://${local.app_names["crm-service"]}:4000" } }
-    delivery-service = { port = 4105, public = false, command = ["npx", "tsx", "services/department-service/src/index.ts"], environment = { DEPARTMENT = "delivery", PORT = "4105", CRM_URL = "http://${local.app_names["crm-service"]}:4000" } }
-    retention-service = { port = 4106, public = false, command = ["npx", "tsx", "services/department-service/src/index.ts"], environment = { DEPARTMENT = "retention", PORT = "4106", CRM_URL = "http://${local.app_names["crm-service"]}:4000" } }
-    automation-service = { port = 4200, public = false, command = ["npx", "tsx", "services/automation-service/src/index.ts"], environment = { PORT = "4200", DATABASE_URL = "" } }
+    crm-api = {
+      port        = 8080, public = false, command = ["dotnet", "Lifecycle.Api.dll"], image_kind = "api",
+      environment = { ASPNETCORE_URLS = "http://+:8080", ASPNETCORE_ENVIRONMENT = "Production" }
+    }
+    automation-worker = {
+      port        = 8080, public = false, command = ["dotnet", "Lifecycle.Worker.dll"], image_kind = "worker",
+      environment = { ASPNETCORE_URLS = "http://+:8080", ASPNETCORE_ENVIRONMENT = "Production" }
+    }
   }
 }
 
@@ -58,7 +52,7 @@ resource "azurerm_container_app" "app" {
   tags                         = { application = var.project_name, environment = var.environment, component = each.key }
 
   dynamic "secret" {
-    for_each = contains(["crm-service", "automation-service"], each.key) ? [1] : []
+    for_each = contains(["crm-api", "automation-worker"], each.key) ? [1] : []
     content {
       name  = "database-url"
       value = var.database_url
@@ -66,21 +60,21 @@ resource "azurerm_container_app" "app" {
   }
 
   template {
-    min_replicas = 0
+    min_replicas = each.key == "automation-worker" ? 1 : 0
     max_replicas = 2
     container {
-      name   = each.key
-      image  = each.key == "web" ? var.web_image : var.api_image
-      cpu    = 0.25
-      memory = "0.5Gi"
+      name    = each.key
+      image   = each.value.image_kind == "web" ? var.web_image : each.value.image_kind == "api" ? var.api_image : var.worker_image
+      cpu     = 0.25
+      memory  = "0.5Gi"
       command = each.value.command
 
       dynamic "env" {
-        for_each = each.value.environment
+        for_each = merge(each.value.environment, contains(["crm-api", "automation-worker"], each.key) ? { "ConnectionStrings__Crm" = "" } : {})
         content {
           name        = env.key
-          value       = env.key == "DATABASE_URL" ? null : env.value
-          secret_name = env.key == "DATABASE_URL" ? "database-url" : null
+          value       = env.key == "ConnectionStrings__Crm" ? null : env.value
+          secret_name = env.key == "ConnectionStrings__Crm" ? "database-url" : null
         }
       }
     }

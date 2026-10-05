@@ -5,24 +5,11 @@
   "type": "module",
   "scripts": {
     "dev:web": "npm --prefix apps/web run dev",
-    "dev:crm": "tsx watch services/crm-service/src/index.ts",
-    "dev:gateway": "tsx watch services/api-gateway/src/index.ts",
-    "dev:department": "tsx watch services/department-service/src/index.ts",
-    "dev:automation": "tsx watch services/automation-service/src/index.ts",
-    "seed:customers": "tsx scripts/seed-customers.ts",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "dev:api": "dotnet run --project src/Lifecycle.Api/Lifecycle.Api.csproj",
+    "dev:worker": "dotnet run --project src/Lifecycle.Worker/Lifecycle.Worker.csproj",
+    "seed:customers": "dotnet run --project src/Lifecycle.Seeder/Lifecycle.Seeder.csproj --",
+    "test": "dotnet test Lifecycle.slnx",
     "build:web": "npm --prefix apps/web run build",
-    "check": "tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --esModuleInterop --skipLibCheck services/*/src/*.ts"
-  },
-  "dependencies": {
-    "express": "^5.1.0",
-    "pg": "^8.16.3"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/node": "^22.16.5",
-    "@types/pg": "^8.15.5",
-    "tsx": "^4.20.3",
-    "typescript": "^5.8.3"
+    "check": "dotnet build Lifecycle.slnx"
   }
 }

@@ -1,5 +1,5 @@
 output "ecr_repositories" {
-  description = "Push the backend services image to each API repository and the web image to the web repository."
+  description = "Push separate .NET API, .NET worker, and web images to the corresponding repositories."
   value       = { for name, repository in aws_ecr_repository.app : name => repository.repository_url }
 }
 

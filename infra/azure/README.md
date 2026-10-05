@@ -1,6 +1,6 @@
 # Azure deployment example
 
-This Terraform stack maps the frontend and backend containers to Azure Container Apps. `deploy_enabled` defaults to `false`. The default plan creates only the resource group; the Log Analytics workspace, Container Apps environment, and application compute are created only after deployment is explicitly enabled.
+This Terraform stack maps the frontend, .NET CRM API, and outbox worker to Azure Container Apps. `deploy_enabled` defaults to `false`. The default plan creates only the resource group; the Log Analytics workspace, Container Apps environment, and application compute are created only after deployment is explicitly enabled.
 
 ## Prerequisites
 
@@ -14,12 +14,13 @@ The Terraform does not provision PostgreSQL. Use an approved managed PostgreSQL 
 
 ## Prepare deployment inputs
 
-Build the backend image from `../../services/Dockerfile` and the frontend image from `../../apps/web/Dockerfile`, then push both to a registry available to Azure. Create a protected remote Terraform state backend before sharing this configuration. The `database_url` variable is marked sensitive but is stored in Terraform state; for production, replace it with a Key Vault secret reference and managed identity access.
+Build the .NET API image from `../../Dockerfile.dotnet` with `PROJECT=src/Lifecycle.Api/Lifecycle.Api.csproj`, the worker image with `PROJECT=src/Lifecycle.Worker/Lifecycle.Worker.csproj`, and the frontend image from `../../apps/web/Dockerfile`; push all three to a registry available to Azure. Create a protected remote Terraform state backend before sharing this configuration. The `database_url` variable is marked sensitive but is stored in Terraform state; for production, replace it with a Key Vault secret reference and managed identity access.
 
 Create an uncommitted `terraform.tfvars` file in this folder with:
 
 - `deploy_enabled = true`
 - `api_image` set to the published backend image URI
+- `worker_image` set to the published outbox worker image URI
 - `web_image` set to the published web image URI
 - `database_url` set to the PostgreSQL connection string for this demo deployment
 - `location`, `environment`, and `resource_group_name` set for the target
@@ -33,7 +34,7 @@ terraform plan
 terraform apply
 ```
 
-The web app is the only externally exposed Container App and receives HTTPS ingress. The gateway and department/CRM services use internal ingress. The gateway routes to the CRM and department apps by their internal app names; the web container receives the internal API gateway hostname as a runtime setting. Container Apps are configured for scale-to-zero with a maximum of two replicas as a starter setting; production traffic and background processing need explicit scaling rules, minimum replica review, and load testing.
+The web app is the only externally exposed Container App and receives HTTPS ingress. The CRM API and outbox worker use internal ingress. The web container receives the internal CRM API hostname as a runtime setting. The web and API can scale to zero; the worker has one minimum replica so pending outbox work does not become stranded at zero replicas. Production traffic and background processing need explicit scaling rules, capacity review, and load testing.
 
 ## Production checklist
 

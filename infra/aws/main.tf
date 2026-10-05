@@ -1,36 +1,32 @@
 locals {
-  image_names = toset(["api", "web"])
+  image_names = toset(["api", "worker", "web"])
   apps = {
     web = {
-      port = 80
-      command = null
-      environment = { API_GATEWAY_HOST = "api-gateway:8080" }
+      port       = 80
+      command    = null
       image_kind = "web"
-    }
-    api-gateway = {
-      port = 8080
-      command = ["npx", "tsx", "services/api-gateway/src/index.ts"]
-      image_kind = "api"
       environment = {
-        PORT = "8080", CRM_URL = "http://crm-service:4000",
-        MARKETING_URL = "http://marketing-service:4101", INSIDE_SALES_URL = "http://inside-sales-service:4102",
-        SALES_URL = "http://sales-service:4103", ORDERING_URL = "http://ordering-service:4104",
-        DELIVERY_URL = "http://delivery-service:4105", RETENTION_URL = "http://retention-service:4106"
+        CRM_API_HOST = "crm-api:8080"
       }
     }
-    crm-service = {
-      port = 4000
-      command = ["npx", "tsx", "services/crm-service/src/index.ts"]
+    crm-api = {
+      port       = 8080
+      command    = ["dotnet", "Lifecycle.Api.dll"]
       image_kind = "api"
-      environment = { PORT = "4000" }
+      environment = {
+        ASPNETCORE_URLS        = "http://+:8080"
+        ASPNETCORE_ENVIRONMENT = "Production"
+      }
     }
-    marketing-service = { port = 4101, command = ["npx", "tsx", "services/department-service/src/index.ts"], image_kind = "api", environment = { DEPARTMENT = "marketing", PORT = "4101", CRM_URL = "http://crm-service:4000" } }
-    inside-sales-service = { port = 4102, command = ["npx", "tsx", "services/department-service/src/index.ts"], image_kind = "api", environment = { DEPARTMENT = "inside-sales", PORT = "4102", CRM_URL = "http://crm-service:4000" } }
-    sales-service = { port = 4103, command = ["npx", "tsx", "services/department-service/src/index.ts"], image_kind = "api", environment = { DEPARTMENT = "sales", PORT = "4103", CRM_URL = "http://crm-service:4000" } }
-    ordering-service = { port = 4104, command = ["npx", "tsx", "services/department-service/src/index.ts"], image_kind = "api", environment = { DEPARTMENT = "ordering", PORT = "4104", CRM_URL = "http://crm-service:4000" } }
-    delivery-service = { port = 4105, command = ["npx", "tsx", "services/department-service/src/index.ts"], image_kind = "api", environment = { DEPARTMENT = "delivery", PORT = "4105", CRM_URL = "http://crm-service:4000" } }
-    retention-service = { port = 4106, command = ["npx", "tsx", "services/department-service/src/index.ts"], image_kind = "api", environment = { DEPARTMENT = "retention", PORT = "4106", CRM_URL = "http://crm-service:4000" } }
-    automation-service = { port = 4200, command = ["npx", "tsx", "services/automation-service/src/index.ts"], image_kind = "api", environment = { PORT = "4200" } }
+    automation-worker = {
+      port       = 8080
+      command    = ["dotnet", "Lifecycle.Worker.dll"]
+      image_kind = "worker"
+      environment = {
+        ASPNETCORE_URLS        = "http://+:8080"
+        ASPNETCORE_ENVIRONMENT = "Production"
+      }
+    }
   }
 }
 
@@ -63,7 +59,7 @@ resource "aws_cloudwatch_log_group" "app" {
 resource "aws_iam_role" "task_execution" {
   name = "${var.project_name}-${var.environment}-ecs-execution"
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{ Effect = "Allow", Principal = { Service = "ecs-tasks.amazonaws.com" }, Action = "sts:AssumeRole" }]
   })
 }
@@ -78,7 +74,7 @@ resource "aws_iam_role_policy" "database_secret" {
   name  = "read-crm-database-secret"
   role  = aws_iam_role.task_execution.id
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{ Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = var.crm_database_secret_arn }]
   })
 }
@@ -183,14 +179,13 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = var.task_cpu
   memory                   = var.task_memory
   execution_role_arn       = aws_iam_role.task_execution.arn
-  container_definitions = jsonencode([{
-    name      = each.key
-    image     = "${aws_ecr_repository.app[each.value.image_kind].repository_url}:${var.image_tag}"
-    essential = true
-    command   = each.value.command == null ? [] : each.value.command
+  container_definitions = jsonencode([merge({
+    name         = each.key
+    image        = "${aws_ecr_repository.app[each.value.image_kind].repository_url}:${var.image_tag}"
+    essential    = true
     portMappings = [{ name = "http", containerPort = each.value.port, hostPort = each.value.port, protocol = "tcp" }]
-    environment = [for name, value in each.value.environment : { name = name, value = value }]
-    secrets = contains(["crm-service", "automation-service"], each.key) ? [{ name = "DATABASE_URL", valueFrom = var.crm_database_secret_arn }] : []
+    environment  = [for name, value in each.value.environment : { name = name, value = value }]
+    secrets      = contains(["crm-api", "automation-worker"], each.key) ? [{ name = "ConnectionStrings__Crm", valueFrom = var.crm_database_secret_arn }] : []
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -199,17 +194,17 @@ resource "aws_ecs_task_definition" "app" {
         awslogs-stream-prefix = "container"
       }
     }
-  }])
+  }, each.value.command == null ? {} : { command = each.value.command })])
   depends_on = [aws_iam_role_policy_attachment.task_execution, aws_iam_role_policy.database_secret]
 }
 
 resource "aws_ecs_service" "app" {
-  for_each        = var.deploy_enabled ? local.apps : {}
-  name            = "${var.project_name}-${each.key}"
-  cluster         = aws_ecs_cluster.app.id
-  task_definition = aws_ecs_task_definition.app[each.key].arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  for_each         = var.deploy_enabled ? local.apps : {}
+  name             = "${var.project_name}-${each.key}"
+  cluster          = aws_ecs_cluster.app.id
+  task_definition  = aws_ecs_task_definition.app[each.key].arn
+  desired_count    = 1
+  launch_type      = "FARGATE"
   platform_version = "LATEST"
   network_configuration {
     subnets          = var.private_subnet_ids

@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Lifecycle.Core/Lifecycle.Core.csproj" />
+  <Project Path="src/Lifecycle.Api/Lifecycle.Api.csproj" />
+  <Project Path="src/Lifecycle.Worker/Lifecycle.Worker.csproj" />
+  <Project Path="src/Lifecycle.Seeder/Lifecycle.Seeder.csproj" />
+  <Project Path="tests/Lifecycle.Tests/Lifecycle.Tests.csproj" />
+</Solution>

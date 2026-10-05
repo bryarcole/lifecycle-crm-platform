@@ -40,7 +40,13 @@ variable "resource_group_name" {
 }
 
 variable "api_image" {
-  description = "Published image URI built from services/Dockerfile."
+  description = "Published .NET CRM API image URI built from Dockerfile.dotnet with PROJECT=src/Lifecycle.Api/Lifecycle.Api.csproj."
+  type        = string
+  default     = ""
+}
+
+variable "worker_image" {
+  description = "Published .NET outbox worker image URI built from Dockerfile.dotnet with PROJECT=src/Lifecycle.Worker/Lifecycle.Worker.csproj."
   type        = string
   default     = ""
 }
@@ -52,7 +58,7 @@ variable "web_image" {
 }
 
 variable "database_url" {
-  description = "PostgreSQL connection string for CRM service. Stored in Terraform state; use protected remote state and a Key Vault reference in production."
+  description = "PostgreSQL connection string for CRM API and worker. Stored in Terraform state; use protected remote state and a Key Vault reference in production."
   type        = string
   sensitive   = true
   default     = ""
