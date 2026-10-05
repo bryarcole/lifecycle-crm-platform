@@ -1,0 +1,10 @@
+.git
+node_modules
+**/node_modules
+apps/web/dist
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.terraform
+terraform.tfstate*

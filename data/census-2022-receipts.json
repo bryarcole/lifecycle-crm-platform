@@ -1,0 +1,64 @@
+{
+  "source": {
+    "publisher": "U.S. Census Bureau",
+    "dataset": "2022 Statistics of U.S. Businesses (SUSB), U.S. 6-digit NAICS by enterprise receipts size",
+    "referenceUrl": "https://www.census.gov/data/tables/2022/econ/susb/2022-susb-annual.html",
+    "downloadUrl": "https://www2.census.gov/programs-surveys/susb/tables/2022/us_6digitnaics_rcptsize_2022.xlsx",
+    "industryClassification": "2017 NAICS",
+    "receiptsUnit": "$1,000",
+    "retrievedDate": "2026-10-04",
+    "notes": "Firm counts and receipts are copied from the published 2022 national enterprise-receipts-size table. G/H/J noise flags are Census disclosure-control markers. This synthetic sample matches the published firm counts and receipts by size band after proportional scaling; records are not real firms."
+  },
+  "industries": [
+    {
+      "naics": "442110",
+      "name": "Furniture Stores, including mattress retailers",
+      "firms": 12708,
+      "receiptsThousands": 76380776,
+      "bands": [
+        { "label": "Under $100K", "minDollars": 0, "maxDollars": 99999, "firms": 850, "receiptsThousands": 45850 },
+        { "label": "$100K-$499K", "minDollars": 100000, "maxDollars": 499999, "firms": 3004, "receiptsThousands": 865005 },
+        { "label": "$500K-$999K", "minDollars": 500000, "maxDollars": 999999, "firms": 2421, "receiptsThousands": 1773430 },
+        { "label": "$1M-$2.499M", "minDollars": 1000000, "maxDollars": 2499999, "firms": 3321, "receiptsThousands": 5293666 },
+        { "label": "$2.5M-$4.999M", "minDollars": 2500000, "maxDollars": 4999999, "firms": 1671, "receiptsThousands": 5751542 },
+        { "label": "$5M-$7.499M", "minDollars": 5000000, "maxDollars": 7499999, "firms": 529, "receiptsThousands": 3113371 },
+        { "label": "$7.5M-$9.999M", "minDollars": 7500000, "maxDollars": 9999999, "firms": 233, "receiptsThousands": 1894765 },
+        { "label": "$10M-$14.999M", "minDollars": 10000000, "maxDollars": 14999999, "firms": 219, "receiptsThousands": 2405718 },
+        { "label": "$15M-$19.999M", "minDollars": 15000000, "maxDollars": 19999999, "firms": 115, "receiptsThousands": 1793637 },
+        { "label": "$20M-$24.999M", "minDollars": 20000000, "maxDollars": 24999999, "firms": 67, "receiptsThousands": 1234866 },
+        { "label": "$25M-$29.999M", "minDollars": 25000000, "maxDollars": 29999999, "firms": 40, "receiptsThousands": 951239 },
+        { "label": "$30M-$34.999M", "minDollars": 30000000, "maxDollars": 34999999, "firms": 29, "receiptsThousands": 747815 },
+        { "label": "$35M-$39.999M", "minDollars": 35000000, "maxDollars": 39999999, "firms": 23, "receiptsThousands": 663970 },
+        { "label": "$40M-$49.999M", "minDollars": 40000000, "maxDollars": 49999999, "firms": 22, "receiptsThousands": 953430 },
+        { "label": "$50M-$74.999M", "minDollars": 50000000, "maxDollars": 74999999, "firms": 45, "receiptsThousands": 2055049 },
+        { "label": "$75M-$99.999M", "minDollars": 75000000, "maxDollars": 99999999, "firms": 17, "receiptsThousands": 1356563 },
+        { "label": "$100M+", "minDollars": 100000000, "maxDollars": null, "firms": 102, "receiptsThousands": 45480860 }
+      ]
+    },
+    {
+      "naics": "337910",
+      "name": "Mattress Manufacturing",
+      "firms": 321,
+      "receiptsThousands": 9004566,
+      "bands": [
+        { "label": "Under $100K", "minDollars": 0, "maxDollars": 99999, "firms": 15, "receiptsThousands": 925 },
+        { "label": "$100K-$499K", "minDollars": 100000, "maxDollars": 499999, "firms": 56, "receiptsThousands": 16324 },
+        { "label": "$500K-$999K", "minDollars": 500000, "maxDollars": 999999, "firms": 40, "receiptsThousands": 29299 },
+        { "label": "$1M-$2.499M", "minDollars": 1000000, "maxDollars": 2499999, "firms": 54, "receiptsThousands": 86061 },
+        { "label": "$2.5M-$4.999M", "minDollars": 2500000, "maxDollars": 4999999, "firms": 40, "receiptsThousands": 134376 },
+        { "label": "$5M-$7.499M", "minDollars": 5000000, "maxDollars": 7499999, "firms": 16, "receiptsThousands": 87450 },
+        { "label": "$7.5M-$9.999M", "minDollars": 7500000, "maxDollars": 9999999, "firms": 12, "receiptsThousands": 107841 },
+        { "label": "$10M-$14.999M", "minDollars": 10000000, "maxDollars": 14999999, "firms": 18, "receiptsThousands": 204915 },
+        { "label": "$15M-$19.999M", "minDollars": 15000000, "maxDollars": 19999999, "firms": 10, "receiptsThousands": 164304 },
+        { "label": "$20M-$24.999M", "minDollars": 20000000, "maxDollars": 24999999, "firms": 10, "receiptsThousands": 226944 },
+        { "label": "$25M-$29.999M", "minDollars": 25000000, "maxDollars": 29999999, "firms": 5, "receiptsThousands": 122056 },
+        { "label": "$30M-$34.999M", "minDollars": 30000000, "maxDollars": 34999999, "firms": 4, "receiptsThousands": 130499 },
+        { "label": "$35M-$39.999M", "minDollars": 35000000, "maxDollars": 39999999, "firms": 3, "receiptsThousands": 103080 },
+        { "label": "$40M-$49.999M", "minDollars": 40000000, "maxDollars": 49999999, "firms": 4, "receiptsThousands": 112836 },
+        { "label": "$50M-$74.999M", "minDollars": 50000000, "maxDollars": 74999999, "firms": 9, "receiptsThousands": 527701 },
+        { "label": "$75M-$99.999M", "minDollars": 75000000, "maxDollars": 99999999, "firms": 4, "receiptsThousands": 310525 },
+        { "label": "$100M+", "minDollars": 100000000, "maxDollars": null, "firms": 21, "receiptsThousands": 6639430 }
+      ]
+    }
+  ]
+}
