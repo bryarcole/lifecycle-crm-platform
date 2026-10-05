@@ -1,0 +1,57 @@
+name: Deploy browser-only demo to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "data/census-2022-receipts.json"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Configure GitHub Pages metadata
+        uses: actions/configure-pages@v5
+      - name: Install frontend dependencies
+        run: npm ci --prefix apps/web
+      - name: Build static portfolio demo
+        env:
+          VITE_DEMO_MODE: "true"
+          VITE_BASE_PATH: "/${{ github.event.repository.name }}/"
+        run: npm --prefix apps/web run build
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy static demo
+        id: deployment
+        uses: actions/deploy-pages@v4

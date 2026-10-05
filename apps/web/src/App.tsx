@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { requestDemo, resetDemoData } from './demoApi';
 import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Bell, Boxes, BriefcaseBusiness,
   Check, ChevronDown, CircleHelp, Command, Compass, Filter,
@@ -71,6 +72,7 @@ const stageLabels: Record<string, string> = {
   new_lead: 'New lead', warm_lead: 'Warm lead', qualified: 'Qualified', closed_won: 'Closed won',
   closed_lost: 'Closed lost', renewal_due: 'Renewal due', awaiting_delivery: 'Awaiting delivery', active_customer: 'Active customer',
 };
+const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 const money = (amount: number | string) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(amount) || 0);
 const numberFormat = new Intl.NumberFormat('en-US');
 const timeAgo = (value: string) => {
@@ -81,6 +83,7 @@ const timeAgo = (value: string) => {
 };
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  if (IS_DEMO_MODE) return requestDemo<T>(url, options);
   const response = await fetch(url, { ...options, headers: { 'content-type': 'application/json', ...options?.headers } });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail ?? data.error ?? data.title ?? 'Request failed');
@@ -211,6 +214,7 @@ function App() {
       <main className="main-area" id="top">
         <header className="topbar"><div className="breadcrumbs">Workspace <span>/</span> <strong>{department.label}</strong></div><div className="top-actions"><label className="global-search"><Search size={16} /><input placeholder="Search customers..." value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search customers" /><kbd>⌘ K</kbd></label><button className="icon-button" aria-label="Notifications" aria-expanded={showNotifications} onClick={() => setShowNotifications(!showNotifications)}><Bell size={18} />{notifications.length > 0 && <i />}</button><div className="top-avatar">AM</div></div>{showNotifications && <section className="notification-popover" aria-label="Handoff notifications"><div className="notification-heading"><strong>Handoff notifications</strong><button onClick={() => setShowNotifications(false)} aria-label="Close notifications"><X size={14} /></button></div>{notifications.length === 0 ? <p className="notification-empty">No handoffs yet. Workflow changes will appear here.</p> : notifications.slice(0, 8).map((item) => <article className="notification-item" key={item.id}><span className="notification-mark"><Send size={13} /></span><span><strong>{item.customerName}</strong><small>{item.message}</small><small>{timeAgo(item.createdAt)}</small></span></article>)}</section>}</header>
         <div className="content-wrap">
+          {IS_DEMO_MODE && <div className="demo-banner" role="status"><span><strong>Portfolio demo mode</strong> Synthetic data only. Changes are saved in this browser and never sent to a server.</span><button onClick={resetDemoData}>Reset demo</button></div>}
           <section className="welcome-row"><div><div className="eyebrow"><span className="live-dot" /> CUSTOMER LIFECYCLE <span className="eyebrow-divider">/</span> {department.label.toUpperCase()}</div><h1>{department.title}</h1><p className="welcome-copy">{department.description}</p></div><div className="welcome-actions"><button className="subtle-button" onClick={() => void loadData()}><Activity size={15} /> Refresh</button>{departmentId === 'marketing' && <button className="primary-button" onClick={() => setShowLeadForm(true)}><Plus size={17} /> Capture lead</button>}</div></section>
 
           {notice && <div className="notice" role="status"><Check size={16} />{notice}<button aria-label="Dismiss message" onClick={() => setNotice('')}><X size={15} /></button></div>}
@@ -254,7 +258,7 @@ function App() {
             </aside>
           </div>
 
-          <footer className="app-footer"><span>Continuum CRM <span>·</span> Unified lifecycle workspace</span><span><span className="connected-dot" /> All services operational</span></footer>
+          <footer className="app-footer"><span>Continuum CRM <span>·</span> Unified lifecycle workspace</span><span><span className="connected-dot" />{IS_DEMO_MODE ? ' Browser-only demo active' : ' All services operational'}</span></footer>
         </div>
       </main>
 

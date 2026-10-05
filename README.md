@@ -4,6 +4,14 @@ This starter implements the supplied **Lifecycle Enterprise CRM Platform** desig
 
 The project is intended for learning and architecture discussion. It is not a production CRM or a production-ready cloud deployment.
 
+## Public portfolio demo
+
+**GitHub Pages demo:** [https://bryarcole.github.io/lifecycle-crm-platform/](https://bryarcole.github.io/lifecycle-crm-platform/)
+
+The Pages site is a static, browser-only showcase. It generates 25,000 fictional accounts from the checked-in Census receipt-size benchmark; lifecycle actions are simulated and saved only in that browser's local storage. It does not connect to PostgreSQL, the .NET API, or the background worker. This keeps the portfolio URL safe to share without exposing a database or credentials.
+
+The full-stack .NET API, PostgreSQL schema, worker, seeder, Compose setup, tests, and AWS/Azure examples remain in the repository for code review and local/cloud deployment. GitHub Actions rebuilds and republishes the Pages demo when frontend or benchmark files change on `main`.
+
 ## Industry-scale demo data
 
 The CRM can be populated with exactly 25,000 fictional company accounts based on published U.S. Census firm counts and annual receipts-size bands for furniture retailers (including mattress stores) and mattress manufacturers. The source distribution is visible in the **Account revenue distribution** dashboard panel. The records are synthetic; all email addresses use the reserved `.example` domain. Details, source links, assumptions, and caveats are in [docs/customer-data.md](docs/customer-data.md).
